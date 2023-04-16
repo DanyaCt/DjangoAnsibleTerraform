@@ -5,3 +5,7 @@ output "public-instance-ip" {
 output "private-instance-ip" {
   value = aws_instance.my_private_ec2_instance.private_ip
 }
+
+output "my_lb_dns_name" {
+    value = aws_lb.my_lb.dns_name
+}

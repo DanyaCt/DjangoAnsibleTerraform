@@ -1,5 +1,6 @@
 *.pem
 .terraform.lock*
+inventory.ini
 
 # Local .terraform directories
 **/.terraform/*
