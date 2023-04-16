@@ -1,0 +1,53 @@
+---
+# Private
+    - name: Install apt-transport-https
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - lsb-release
+          - gnupg
+        state: latest
+        update_cache: true
+      when: "'private' in group_names"
+    - name: Add signing key
+      apt_key:
+        url: "https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg"
+        state: present
+      when: "'private' in group_names"
+    - name: Add repository into sources list
+      apt_repository:
+        repo: "deb [arch={{ ansible_architecture }}] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable"
+        state: present
+        filename: docker
+      when: "'private' in group_names"
+    - name: Install Docker
+      apt:
+        name:
+          - docker
+          - docker.io
+          - docker-compose
+          - docker-registry
+        state: latest
+        update_cache: true
+      when: "'private' in group_names"
+# Public
+    - name: Install pip3, nginx
+      apt:
+        name: '{{ item }}'
+        state: present
+        update_cache: yes
+      loop:
+        - python3-pip
+        - nginx
+      when: "'public' in group_names"
+    - name: Copy requirements
+      template:
+        src: req.j2
+        dest: ~/req.txt
+      when: "'public' in group_names"
+    - name: Install dependencies
+      pip:
+        requirements: ~/req.txt
+        state: present
+      when: "'public' in group_names"

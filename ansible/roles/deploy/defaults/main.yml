@@ -1,0 +1,4 @@
+---
+    postgres_user: db
+    postgres_password: db
+    postgres_db: db

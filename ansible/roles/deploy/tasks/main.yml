@@ -1,0 +1,63 @@
+---
+# Private
+    - name: Start Docker container with Postgres
+      docker_container:
+        name: postgres
+        image: postgres
+        restart_policy: always
+        env:
+          POSTGRES_USER: "{{ postgres_user }}"
+          POSTGRES_PASSWORD: "{{ postgres_password }}"
+          POSTGRES_DB: "{{ postgres_db }}"
+        ports:
+          - "5432:5432"
+      when: "'private' in group_names"
+# Public
+    - name: Clone git repository
+      git: 
+        repo: https://github.com/digitalocean/sample-django
+        dest: /home/ubuntu/sample-django
+        force: yes
+      when: "'public' in group_names"
+    - name: Change configuration
+      replace:
+        path: /home/ubuntu/sample-django/requirements.txt
+        regexp: 'backports.zoneinfo==0.2.1'
+        replace: 'backports.zoneinfo;python_version<"3.9"'
+      when: "'public' in group_names"
+    - name: Change db configuration
+      template:
+        src: settings.j2
+        dest: /home/ubuntu/sample-django/mysite/settings.py
+      vars:
+        dbhost: '{{ database_host }}'  
+      when: "'public' in group_names"
+    - name: Copy nginx configuration file
+      get_url:
+        url: https://gist.githubusercontent.com/christophior/bea391858db98d047312614d79c789d0/raw/9cd965519022cfe440d6eba54a6f05621e437405/nginx.default
+        dest: "/etc/nginx/sites-available/default"
+      when: "'public' in group_names"
+    - name: Reload nginx
+      service:
+        name: nginx
+        state: reloaded
+      when: "'public' in group_names"
+    - name: Export variables and launch app
+      shell: |
+              export DATABASE_URL=postgresql://{{ database_host }}:5432 
+              tmux new-session -d -s app 'python3 /home/ubuntu/sample-django/manage.py runserver 0.0.0.0:8000'
+      when: "'public' in group_names"
+      ignore_errors: yes
+    - name: Export variables and migrate
+      shell: |
+              export DATABASE_URL=postgresql://{{ database_host }}:5432 
+              python3 /home/ubuntu/sample-django/manage.py migrate
+      when: "'public' in group_names"
+      run_once: true
+    - name: Export variables and create superuser
+      shell: |
+              export DATABASE_URL=postgresql://{{ database_host }}:5432 
+              python3 /home/ubuntu/sample-django/manage.py createsuperuser --username ubuntu --email sebtec1212@gmail.com --noinput
+      run_once: true
+      ignore_errors: yes
+      when: "'public' in group_names"
